@@ -75,6 +75,7 @@ ASSIGNMENT/
 
 ## 3. Sinh dữ liệu và đẩy vào Kafka
 Kafka producer sẽ sinh synthetic transaction data và gửi vào Kafka topic
+
 `cd fraud-prediction/producer`
 
 `pip install -r requirements.txt`
