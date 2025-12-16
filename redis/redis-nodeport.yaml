@@ -1,0 +1,15 @@
+# file: redis-nodeport.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-external
+  namespace: infra
+spec:
+  type: NodePort
+  selector:
+    app: redis
+  ports:
+    - name: redis
+      port: 6379        # port service trong cluster
+      targetPort: 6379  # port container redis
+      nodePort: 30379   # port mở ra ngoài (tùy chọn, miễn chưa bị dùng)

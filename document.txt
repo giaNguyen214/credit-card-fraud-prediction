@@ -1,0 +1,108 @@
+node 	| public ip 			|  private ip
+master 	| 52.221.207.227	| 172.31.16.240
+worker1 	| 3.0.96.144	 	| 172.31.22.65
+worker2 	| 18.139.255.56 	| 172.31.17.99
+
+
+
+Lấy thông tin các node trong cluster
+	kubectl get nodes -o wide
+Lấy thông tin các pod đang chạy
+	kubectl get pods -A -o wide
+Lấy thông tin các port đang mở
+	 kubectl get svc -A
+
+Thay bằng public ip của master node
+Nginx (test trong lab):	http://52.221.207.227:32513
+Spark:				http://52.221.207.227:30081	
+Grafana:				http://52.221.207.227:32000
+Kafka UI:				http://52.221.207.227:30080
+MinIO:				http://52.221.207.227:30374
+
+
+
+
+MASTER
+
+Copy file lên spark-master pod: 	kubectl cp stream-all.py kafka/spark-master-5f5d65ff69-7hqfq:/opt/spark/stream-all.py
+Kiểm tra:					 	kubectl exec -n kafka spark-master-5f5d65ff69-7hqfq -- ls /opt/spark
+Vào spark master pod: 			kubectl exec -it -n kafka spark-master-5f5d65ff69-7hqfq -- bash
+
+Cài trong pod: nếu pod restart, out ra ngoài cũng mất luôn á, phải ngồi cài lại thủ công:
+pip install --no-cache-dir --target=/tmp/pylibs \
+  numpy==1.24.4 \
+  pandas==2.0.3 \
+  python-dateutil==2.9.0.post0 \
+  pytz==2025.2 \
+  tzdata==2025.2 \
+  redis==6.1.1 \
+  duckdb==1.1.0 \
+  async-timeout==5.0.1
+
+pip install --no-cache-dir --target=/tmp/pylibs \
+   catboost==1.2.8 \
+  lightgbm==4.6.0 \
+  xgboost==2.1.4 \
+  scikit-learn==1.2.2 \
+  scipy==1.10.1 \
+  joblib==1.4.2
+
+
+
+export PYSPARK_PYTHON=python3
+export PYSPARK_DRIVER_PYTHON=python3
+export SPARK_LOCAL_DIRS=/tmp
+export SPARK_USER_HOME=/tmp
+export IVY_HOME=/tmp/.ivy2
+mkdir -p /tmp/.ivy2
+export PYTHONPATH=/tmp/pylibs:$PYTHONPATH
+
+python3 - <<'EOF'
+import redis, pandas, numpy
+print("PYTHON OK")
+EOF
+
+Chạy submit job
+spark-master-6ddd7d46fd-6db28 
+	/opt/spark/bin/spark-submit   --master spark://spark-master-6ddd7d46fd-6db28:7077   --deploy-mode client   --conf spark.jars.ivy=/tmp/.ivy2   --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.1,org.apache.hadoop:hadoop-	aws:3.3.4,com.amazonaws:aws-java-sdk-bundle:1.12.262   /opt/spark/stream-all.py
+
+Chạy được nha:	
+	/opt/spark/bin/spark-submit   --master spark://spark-master:7077   --deploy-mode client   --conf spark.jars.ivy=/tmp/.ivy2   --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.1,org.apache.hadoop:hadoop-	aws:3.3.4,com.amazonaws:aws-java-sdk-bundle:1.12.262   /opt/spark/stream-all.py
+
+# Kiểm tra file
+ls -lh /opt/spark/stream-all.py
+cat /opt/spark/stream-all.py
+pip list --path /tmp/pylibs
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Tạo pod tạm:
+ kubectl run kafka-producer \
+  -it \
+  --image=python:3.10 \
+  --restart=Never \
+  -- bash
+
+pip install confluent-kafka
+python /kafka-producer.py
+sed -i 's/kafka-service:9092/kafka-service.kafka:9092/g' /kafka-producer.py
+
+
+Bên ngoài master copy file vào:
+kubectl cp kafka-producer.py kafka-producer:/kafka-producer.py
+kubectl cp utils kafka-producer:/utils
+
+

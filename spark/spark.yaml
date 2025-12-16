@@ -1,0 +1,95 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: spark-config
+  namespace: kafka
+data:
+  SPARK_MASTER_URL: "spark://spark-master:7077"
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: spark-master
+  namespace: kafka
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: spark-master
+  template:
+    metadata:
+      labels:
+        app: spark-master
+    spec:
+      containers:
+        - name: spark-master
+          image: apache/spark:3.5.1
+          env:
+            - name: SPARK_MASTER_BIND_ADDRESS
+              value: "0.0.0.0"
+            - name: SPARK_MASTER_PORT
+              value: "7077"   # 🔥 OVERRIDE BUG K8S
+          command: ["/bin/bash", "-c"]
+          args:
+            - |
+              /opt/spark/sbin/start-master.sh;
+              tail -f /dev/null
+          ports:
+            - containerPort: 7077
+            - containerPort: 8080
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: spark-master
+  namespace: kafka
+spec:
+  type: NodePort
+  selector:
+    app: spark-master
+  ports:
+    - name: rpc
+      port: 7077
+      targetPort: 7077
+      nodePort: 30133
+    - name: web
+      port: 8080
+      targetPort: 8080
+      nodePort: 30081
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: spark-worker
+  namespace: kafka
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: spark-worker
+  template:
+    metadata:
+      labels:
+        app: spark-worker
+    spec:
+      containers:
+        - name: spark-worker
+          image: apache/spark:3.5.1
+          env:
+            - name: SPARK_MASTER
+              valueFrom:
+                configMapKeyRef:
+                  name: spark-config
+                  key: SPARK_MASTER_URL
+            - name: SPARK_WORKER_MEMORY
+              value: "1400m"
+          command: ["/bin/bash", "-c"]
+          args:
+            - |
+              /opt/spark/sbin/start-worker.sh ${SPARK_MASTER};
+              tail -f /dev/null
+          ports:
+            - containerPort: 8081
