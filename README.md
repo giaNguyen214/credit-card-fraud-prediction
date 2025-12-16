@@ -68,13 +68,17 @@ ASSIGNMENT/
 ## 2. Deploy framework lên Kubernetes
 - Apply toàn bộ các file YAML để dựng hạ tầng xử lý streaming
 - Kiểm tra các service/pod:  
+
   Lấy thông tin các pod đang chạy:       `kubectl get pods -A -o wide`
+  
   Lấy thông tin các port đang mở:        `kubectl get svc -A`
 
 ## 3. Sinh dữ liệu và đẩy vào Kafka
 Kafka producer sẽ sinh synthetic transaction data và gửi vào Kafka topic
 `cd fraud-prediction/producer`
+
 `pip install -r requirements.txt`
+
 `python kafka-producer.py`
 
 ## 4. Chạy Spark Structured Streaming Job
